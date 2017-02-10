@@ -24,8 +24,8 @@
 'use strict';
 
 const Animated = require('Animated');
-const PanResponder = require('PanResponder');
 const I18nManager = require('I18nManager');
+const PanResponder = require('PanResponder');
 const React = require('React');
 const StyleSheet = require('StyleSheet');
 const TimerMixin = require('react-timer-mixin');
@@ -136,6 +136,7 @@ const SwipeableRow = React.createClass({
       onPanResponderRelease: this._handlePanResponderEnd,
       onPanResponderTerminationRequest: this._onPanResponderTerminationRequest,
       onPanResponderTerminate: this._handlePanResponderEnd,
+      onShouldBlockNativeResponder: (event, gestureState) => false,
     });
   },
 
@@ -173,7 +174,7 @@ const SwipeableRow = React.createClass({
   render(): React.Element<any> {
     // The view hidden behind the main view
     let slideOutView;
-    if (this.state.isSwipeableViewRendered) {
+    if (this.state.isSwipeableViewRendered && this.state.rowHeight) {
       slideOutView = (
         <View style={[
           styles.slideOutContainer,
@@ -188,12 +189,7 @@ const SwipeableRow = React.createClass({
     const swipeableView = (
       <Animated.View
         onLayout={this._onSwipeableViewLayout}
-        style={[
-          styles.swipeableContainer,
-          {
-            transform: [{translateX: this.state.currentLeft}],
-          },
-        ]}>
+        style={{transform: [{translateX: this.state.currentLeft}]}}>
         {this.props.children}
       </Animated.View>
     );
@@ -392,9 +388,6 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 0,
     top: 0,
-  },
-  swipeableContainer: {
-    flex: 1,
   },
 });
 

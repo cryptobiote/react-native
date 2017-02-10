@@ -27,6 +27,7 @@ import com.facebook.react.bridge.UiThreadUtil;
 import com.facebook.react.common.ReactConstants;
 import com.facebook.react.common.network.OkHttpCallUtil;
 import com.facebook.react.modules.systeminfo.AndroidInfoHelpers;
+import com.facebook.react.packagerconnection.JSPackagerWebSocketClient;
 
 import okhttp3.Call;
 import okhttp3.Callback;
@@ -83,6 +84,8 @@ public class DevServerHelper {
 
   public interface PackagerCommandListener {
     void onPackagerReloadCommand();
+    void onCaptureHeapCommand();
+    void onPokeSamplingProfilerCommand(@Nullable final JSPackagerWebSocketClient.WebSocketSender webSocket);
   }
 
   public interface PackagerStatusCallback {
@@ -122,9 +125,18 @@ public class DevServerHelper {
         mPackagerConnection = new JSPackagerWebSocketClient(getPackagerConnectionURL(),
           new JSPackagerWebSocketClient.JSPackagerCallback() {
             @Override
-            public void onMessage(String target, String action) {
-              if (commandListener != null && "bridge".equals(target) && "reload".equals(action)) {
-                commandListener.onPackagerReloadCommand();
+            public void onMessage(
+                @Nullable JSPackagerWebSocketClient.WebSocketSender webSocket,
+                String target,
+                String action) {
+              if (commandListener != null && "bridge".equals(target)) {
+                if ("reload".equals(action)) {
+                  commandListener.onPackagerReloadCommand();
+                } else if ("captureHeap".equals(action)) {
+                  commandListener.onCaptureHeapCommand();
+                } else if ("pokeSamplingProfiler".equals(action)) {
+                  commandListener.onPokeSamplingProfilerCommand(webSocket);
+                }
               }
             }
           });
