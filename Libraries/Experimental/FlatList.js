@@ -39,6 +39,7 @@ const VirtualizedList = require('VirtualizedList');
 
 const invariant = require('invariant');
 
+import type {StyleObj} from 'StyleSheetTypes';
 import type {Viewable} from 'ViewabilityHelper';
 
 type Item = any;
@@ -93,7 +94,7 @@ type OptionalProps = {
    * Multiple columns can only be rendered with horizontal={false} and will zig-zag like a flexWrap
    * layout. Items should all be the same height - masonry layouts are not supported.
    */
-  numColumns?: number,
+  numColumns: number,
   /**
    * Called once when the scroll position gets within onEndReachedThreshold of the rendered content.
    */
@@ -113,6 +114,10 @@ type OptionalProps = {
    * Set this true while waiting for new data from a refresh.
    */
   refreshing?: ?boolean,
+  /**
+   * Optional custom style for multi-item rows generated when numColumns > 1
+   */
+  columnWrapperStyle?: StyleObj,
   /**
    * Optional optimization to minimize re-rendering items.
    */
@@ -145,6 +150,7 @@ type Props = RequiredProps & OptionalProps; // plus props from the underlying im
 class FlatList extends React.PureComponent {
   static defaultProps = {
     keyExtractor: VirtualizedList.defaultProps.keyExtractor,
+    numColumns: 1,
     shouldItemUpdate: VirtualizedList.defaultProps.shouldItemUpdate,
   };
   props: Props;
@@ -194,13 +200,22 @@ class FlatList extends React.PureComponent {
   _captureRef = (ref) => { this._listRef = ref; };
 
   _checkProps(props: Props) {
-    const {getItem, getItemCount, horizontal, legacyImplementation, numColumns, } = props;
+    const {
+      getItem,
+      getItemCount,
+      horizontal,
+      legacyImplementation,
+      numColumns,
+      columnWrapperStyle,
+    } = props;
     invariant(!getItem && !getItemCount, 'FlatList does not support custom data formats.');
     if (numColumns > 1) {
       invariant(!horizontal, 'numColumns does not support horizontal.');
+    } else {
+      invariant(!columnWrapperStyle, 'columnWrapperStyle not supported for single column lists');
     }
     if (legacyImplementation) {
-      invariant(!(numColumns > 1), 'Legacy list does not support multiple columns.');
+      invariant(numColumns === 1, 'Legacy list does not support multiple columns.');
       // Warning: may not have full feature parity and is meant more for debugging and performance
       // comparison.
       if (!this._hasWarnedLegacy) {
@@ -228,7 +243,7 @@ class FlatList extends React.PureComponent {
   };
 
   _getItemCount = (data: Array<Item>): number => {
-    return Math.floor(data.length / (this.props.numColumns || 1));
+    return Math.floor(data.length / this.props.numColumns);
   };
 
   _keyExtractor = (items: Item | Array<Item>, index: number): string => {
@@ -265,10 +280,10 @@ class FlatList extends React.PureComponent {
   };
 
   _renderItem = ({item, index}) => {
-    const {ItemComponent, numColumns} = this.props;
+    const {ItemComponent, numColumns, columnWrapperStyle} = this.props;
     if (numColumns > 1) {
       return (
-        <View style={{flexDirection: 'row'}}>
+        <View style={[{flexDirection: 'row'}, columnWrapperStyle]}>
           {item.map((it, kk) =>
             <ItemComponent key={kk} item={it} index={index * numColumns + kk} />)
           }
